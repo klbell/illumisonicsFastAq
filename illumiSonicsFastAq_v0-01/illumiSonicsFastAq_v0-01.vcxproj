@@ -167,6 +167,11 @@
     <ClInclude Include="Source.h" />
     <ClInclude Include="StageMoves.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="ISS_Settings.ini" />
+    <None Include="ISS_SettingsFastMix.ini" />
+    <None Include="PARSSingleCap.ini" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

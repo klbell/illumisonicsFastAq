@@ -75,7 +75,7 @@ DWORD WINAPI CardStream(void *CardIndex);
 void UpdateProgress(uInt32 u32Elapsed, LONGLONG llSamples);
 
 // Real-Time functions
-int initializeGageStream();
+int initializeGageStream(bool bFastMix);
 int gageStreamRealtime();
 int16 findMaxVal(void*  pWorkBuffer);
 int32 InitializeStream(CSHANDLE hSystem);

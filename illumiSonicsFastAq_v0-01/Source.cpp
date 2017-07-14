@@ -4,6 +4,10 @@ LPCTSTR saveDirectory = _T("C:\\Users\\PARS1\\Desktop\\PARS\\Data\\Oct 19_EOMRTT
 
 bool useMTTrans = false;
 
+// For fast mixed imaging
+int XStepSize = 5 / 4; // um
+int XTotSize = 100; // um
+
 int main()
 {
 	int scanMode;
@@ -25,9 +29,9 @@ int main()
 			break;
 		case 2: runPARSRT();	// PARS real-time capture mode
 			break;
-		/*case 3: runPAM();
+		case 3: runFastMix();
 			break;
-		case 4: runFree();
+		/*case 4: runFree();
 			break;*/
 		default: 
 			_ftprintf(stdout, "Invalid selection\n\n");
@@ -71,7 +75,9 @@ int runPARSRT()
 		}
 	}
 	else {		
-		initializeGageStream(); // Setup Gage card
+		bool bFastMix = 0;
+
+		initializeGageStream(bFastMix); // Setup Gage card
 		OpenRTWindow(); // Launch view window
 		initializeWindowVars(false); // Set ploting variables
 
@@ -89,8 +95,14 @@ int runPARSRT()
 	return 0;
 }
 
-int runPAM()
+int runFastMix()
 {
+	PARSFastMixWelcome();
+
+	bool bFastMix = 1;
+
+	initializeGageStream(bFastMix);
+
 	return 0;
 }
 

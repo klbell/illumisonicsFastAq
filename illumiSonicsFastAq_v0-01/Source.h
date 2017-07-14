@@ -23,7 +23,7 @@
 
 int runPARS();
 int runPARSRT();
-int runPAM();
+int runFastMix();
 int runFree();
 
 

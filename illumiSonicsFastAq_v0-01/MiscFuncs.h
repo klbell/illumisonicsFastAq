@@ -8,6 +8,7 @@ void illuWelcome();
 int getScanMode();
 void PARSWelcome(LPCTSTR saveDirectory);
 void PARSRTWelcome();
+void PARSFastMixWelcome();
 
 
 #endif

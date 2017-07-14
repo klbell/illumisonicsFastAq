@@ -962,13 +962,20 @@ void UpdateProgress(uInt32 u32Elapsed, LONGLONG llSamples)
 *****************************************************/
 
 
-int initializeGageStream()
+int initializeGageStream(bool bFastMix)
 {
 	int32						i32Status = CS_SUCCESS;	
 	uInt32						u32Mode; 
-	LPCTSTR						szIniFile = _T("ISS_Settings.ini");	
+	if (bFastMix)
+	{
+							szIniFile = _T("ISS_SettingsFastMix.ini");
+	}
+	else
+	{
+							szIniFile = _T("ISS_Settings.ini");
+	}
+	
 	uInt32						u32DataSegmentWithTailInBytes = 0;
-
 
 	// Initialize board
 	i32Status = CsInitialize(); 

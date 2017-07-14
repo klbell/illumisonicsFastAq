@@ -16,7 +16,7 @@ int getScanMode()
 {
 	int response;
 	_ftprintf(stdout, "\n\n\n New Scan \n");
-	_ftprintf(stdout,     "----------\n(0 = Exit Program, 1 = PARS Single Capture, 2 = PARS Real-Time)\nPlease enter mode: ");
+	_ftprintf(stdout,     "----------\n0 = Exit Program\n1 = PARS Single Capture\n2 = PARS Real-Time\n3 = PARS Fast Mix\n\nPlease enter mode: ");
 	int returnVal = scanf("%d", &response);
 	if (!returnVal)
 	{
@@ -40,4 +40,11 @@ void PARSRTWelcome()
 	_ftprintf(stdout, "\n\n\n");
 	_ftprintf(stdout, "\n-    PARS Real-Time    -");
 	_ftprintf(stdout, "\n------------------------\n");
+}
+
+void PARSFastMixWelcome()
+{
+	_ftprintf(stdout, "\n\n\n");
+	_ftprintf(stdout, "\n-    PARS Fasted Mixed Imaging    -");
+	_ftprintf(stdout, "\n-----------------------------------");
 }
