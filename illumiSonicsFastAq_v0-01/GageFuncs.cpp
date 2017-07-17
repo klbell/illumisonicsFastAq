@@ -965,17 +965,17 @@ void UpdateProgress(uInt32 u32Elapsed, LONGLONG llSamples)
 int initializeGageStream(bool bFastMix)
 {
 	int32						i32Status = CS_SUCCESS;	
-	uInt32						u32Mode; 
+	uInt32						u32Mode; 	
+	uInt32						u32DataSegmentWithTailInBytes = 0;
+
 	if (bFastMix)
 	{
-							szIniFile = _T("ISS_SettingsFastMix.ini");
+		szIniFile = _T("ISS_SettingsFastMix.ini");
 	}
 	else
 	{
-							szIniFile = _T("ISS_Settings.ini");
+		szIniFile = _T("ISS_Settings.ini");
 	}
-	
-	uInt32						u32DataSegmentWithTailInBytes = 0;
 
 	// Initialize board
 	i32Status = CsInitialize(); 
@@ -1245,6 +1245,141 @@ int gageStreamRealtime()
 		}
 	}
 	
+	return 0;
+}
+
+int gageStreamRealtimeFastMix()
+{
+	BOOL						bDone = FALSE;
+	BOOL						bErrorData = FALSE;
+	BOOL						bStreamCompletedSuccess = FALSE;
+	uInt8						u8EndOfData = 0;
+	int32						i32Status = CS_SUCCESS;
+	uInt32						u32TickStart = 0;
+	uInt32						u32LoopCount = 0;
+	uInt32						u32SaveCount = 0;
+	uInt32						u32ErrorFlag = 0;
+	uInt32						u32ActualLength = 0;
+	long long					llTotalSamples = 0;
+
+
+	//printf("\nStarting stream. Press ESC to abort\n\n");
+
+
+	// Start data aquisition
+	i32Status = CsDo(hSystem, ACTION_START);
+	if (CS_FAILED(i32Status))
+	{
+		DisplayErrorString(i32Status);
+		free(i16MaxValues);
+		CsStmFreeBuffer(hSystem, 0, pBuffer1);
+		CsStmFreeBuffer(hSystem, 0, pBuffer2);
+		CsFreeSystem(hSystem);
+		return (-1);
+	}
+
+	// get tick count
+	u32TickStart = GetTickCount();
+
+
+	// Primary capture loop
+	// !(bDone || bStreamCompletedSuccess)
+	while (1)
+	{
+		// Determine which buffer will get capture data
+		if (u32LoopCount & 1)
+		{
+			pCurrentBuffer = pBuffer2;
+		}
+		else
+		{
+			pCurrentBuffer = pBuffer1;
+		}
+
+		i32Status = CsStmTransferToBuffer(hSystem, 0, pCurrentBuffer, u32TransferSize);
+		if (CS_FAILED(i32Status))
+		{
+			DisplayErrorString(i32Status);
+			break;
+		}
+
+		if (StmConfig.bDoAnalysis)
+		{
+			if (NULL != pWorkBuffer)
+			{
+				// Do analysis
+				fastMixExtract(pWorkBuffer, CsAcqCfg.i64SegmentSize);
+			}
+		}
+
+
+		// Wait for transfer on current buffer to finish
+		i32Status = CsStmGetTransferStatus(hSystem, 0, StmConfig.u32TransferTimeout, &u32ErrorFlag, &u32ActualLength, &u8EndOfData);
+		if (CS_SUCCEEDED(i32Status))
+		{
+			llTotalSamples += u32TransferSize;
+			bStreamCompletedSuccess = (0 != u8EndOfData);
+
+			if (STM_TRANSFER_ERROR_FIFOFULL & u32ErrorFlag)
+			{
+				_ftprintf(stdout, _T("\nStream Fifo full !!!"));
+				bDone = TRUE;
+			}
+		}
+		else
+		{
+			bDone = TRUE;
+			if (CS_STM_TRANSFER_TIMEOUT == i32Status)
+			{
+				// Timeout
+				_ftprintf(stdout, _T("\nStream transfer timeout. !!!"));
+			}
+			else if (CS_STM_TRANSFER_ABORTED == i32Status)
+			{
+				_ftprintf(stdout, _T("\nStream transfer aborted. !!!"));
+			}
+			else
+			{
+				DisplayErrorString(i32Status);
+			}
+		}
+
+		pWorkBuffer = pCurrentBuffer;
+
+		u32LoopCount++;
+
+		/* Are we being asked to quit? */
+		if (_kbhit())
+		{
+			switch (toupper(_getch()))
+			{
+			case 27:
+				bDone = TRUE;
+				break;
+			default:
+				MessageBeep(MB_ICONHAND);
+				break;
+			}
+		}
+
+		// Show on the screen the result in every about 900ms sec 
+		UpdateProgress(u32TickStart, 900, llTotalSamples);
+	}
+
+
+	// Abort current aquisition
+	CsDo(hSystem, ACTION_ABORT);
+
+
+	// Pull last data point from buffer
+	if (StmConfig.bDoAnalysis)
+	{
+		if (u32SaveCount < CsAcqCfg.u32SegmentCount)
+		{
+			fastMixExtract(pWorkBuffer, CsAcqCfg.i64SegmentSize);
+		}
+	}
+
 	return 0;
 }
 

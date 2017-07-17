@@ -95,7 +95,7 @@ void minMaxExtract(void*  pWorkBuffer, uInt32 u32TransferSize)
 		peakRawData[n] = actualData[4 * n];
 	}
 
-	//hilbert(peakRawData,u32TransferSize);
+	
 	int16 tempMax = 0;
 	for (int16 n = 0; n < u32TransferSize; n++)
 	{
@@ -110,6 +110,40 @@ void minMaxExtract(void*  pWorkBuffer, uInt32 u32TransferSize)
 	// Extract Mirror data
 	mirrData[0][captureCount] = actualData[1]; 
 	mirrData[1][captureCount] = actualData[2];
+
+	captureCount++;
+}
+
+void fastMixfExtract(void*  pWorkBuffer, uInt32 u32TransferSize)
+{
+	// Convert in data
+	int16* actualData = (int16*)pWorkBuffer;
+	int totalLength = u32TransferSize * 2;
+
+	int16 * peakRawData;
+	peakRawData = new int16[u32TransferSize];
+
+
+	// Extract signal data
+	for (int16 n = 0; n < u32TransferSize; n++)
+	{
+		peakRawData[n] = actualData[2 * n];
+	}
+
+
+	int16 tempMax = 0;
+	for (int16 n = 0; n < u32TransferSize; n++)
+	{
+		if (peakRawData[n] > tempMax)
+		{
+			tempMax = peakRawData[n];
+		}
+	}
+
+	peakData[captureCount] = tempMax;
+
+	// Extract Mirror data
+	mirrData[0][captureCount] = actualData[1];
 
 	captureCount++;
 }
@@ -386,6 +420,240 @@ int updateScopeWindow()
 
 	resetWindowVars();
 	
+	// Check if clossing
+	if (checkWindowCommands())
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+int updateScopeWindowFastMix(int stepTotalX)
+{
+	// Get handles
+	sf::Image scopeImage;
+	sf::Texture scopeTexture;
+	sf::Sprite background;
+	sf::Color color;
+
+	int xLoc, yLoc;
+	float halfX, halfY, rangeX, rangeY, rangeSig;
+	int intensity;
+
+	int fastMixWinWidth = stepTotalX;
+	int fastMixWinHeight = 50;
+
+	scopeImage.create(fastMixWinWidth, fastMixWinHeight, sf::Color::Black);
+
+	// Find min max values
+	findMinMax();
+
+	// Find range and half values
+	rangeX = maxX - minX;
+	rangeY = maxY - minY;
+	rangeSig = maxSig - minSig;
+	halfX = rangeX / 2;
+	halfY = rangeY / 2;
+
+	// plot points on test grid
+	for (int n = 0; n < captureCount; n++)
+	{
+		// Determine draw location
+		xLoc = ((float)(mirrData[0][n] - minX)*0.98 / rangeX) * interpWidth;
+		yLoc = ((float)(mirrData[1][n] - minY)*0.98 / rangeY) * interpHeight;
+
+		// Determine pixel intensity
+		intensity = (((float)(peakData[n] - minSig)*1.5 / rangeSig)) * 255;
+		intensity = min(240, intensity);
+
+		testgrid[yLoc][xLoc] += intensity;
+		testgridCount[yLoc][xLoc]++;
+	}
+
+	// Average grid pixels which have multiple occurrances
+	for (int i = 0; i < interpHeight; i++)
+	{
+		for (int j = 0; j < interpWidth; j++)
+		{
+			if (testgridCount[i][j] > 1)
+			{
+				testgrid[i][j] = testgrid[i][j] / testgridCount[i][j];
+			}
+		}
+	}
+
+	bool oldAverage = false;
+	int sUp, sDown, sRight, sLeft; // for fancy averaging
+	float wUp, wDown, wLeft, wRight, wDen;
+	float wMult = 2;
+
+	if (oldAverage)
+	{
+		// Do basic spactial averaging and draw
+		for (int i = 1; i < interpHeight - 1; i++)
+		{
+			for (int j = 1; j < interpWidth - 1; j++)
+			{
+				// spactial averaging
+				if (testgridCount[i][j] == 0)
+				{
+					testgrid[i][j] = (testgrid[i - 1][j] + testgrid[i + 1][j] + testgrid[i][j - 1] + testgrid[i][j + 1]) / 4;
+					for (int avg = 0; avg < 2; avg++)
+					{
+						testgrid[i][j] = (2 * testgrid[i][j] + testgrid[i - 1][j] + testgrid[i + 1][j] +
+							testgrid[i][j - 1] + testgrid[i][j + 1]) / 6;
+					}
+				}
+
+
+				intensity = testgrid[i][j];
+
+				// Draw
+				color.r = colormap[intensity][0];
+				color.g = colormap[intensity][1];
+				color.b = colormap[intensity][2];
+
+				for (int a = i*interpLevel; a <= (i + 1)*interpLevel; a++)
+				{
+					for (int b = j*interpLevel; b <= (j + 1)*interpLevel; b++)
+					{
+						scopeImage.setPixel(a, b, color);
+					}
+				}
+			}
+		}
+	}
+	else {
+		// Do fancy spactial averaging and draw
+		for (int i = 1; i < interpHeight - 1; i++)
+		{
+			for (int j = 1; j < interpWidth - 1; j++)
+			{
+				// spactial averaging
+				if (testgridCount[i][j] == 0)
+				{
+					// find closest above
+					for (int search = 1; i + search < interpHeight; search++)
+					{
+						if (testgridCount[i + search][j] != 0 || search == searchSizeX || i + search == interpHeight - 1)
+						{
+							sUp = (float)search;
+							break;
+						}
+					}
+
+					// find closest below
+					for (int search = 1; i - search >= 0; search++)
+					{
+						if (testgridCount[i - search][j] != 0 || search == searchSizeX || i - search == 0)
+						{
+							sDown = (float)search;
+							break;
+						}
+					}
+
+					// find closest right
+					for (int search = 1; j + search < interpWidth; search++)
+					{
+						if (testgridCount[i][j + search] != 0 || search == searchSizeY || j + search == interpWidth - 1)
+						{
+							sRight = (float)search;
+							break;
+						}
+					}
+
+					// find closest left
+					for (int search = 1; j - search >= 0; search++)
+					{
+						if (testgridCount[i][j - search] != 0 || search == searchSizeY || j - search == 0)
+						{
+							sLeft = (float)search;
+							break;
+						}
+					}
+
+					wUp = 1.0f / ((float)sUp * wMult);
+					wDown = 1.0f / ((float)sDown  * wMult);
+					wRight = 1.0f / ((float)sRight * wMult);
+					wLeft = 1.0f / ((float)sLeft * wMult);
+
+					wDen = wUp + wDown + wRight + wLeft;
+
+					rendergrid[i][j] = (int)((wDown * (float)testgrid[i - sDown][j] + wUp * (float)testgrid[i + sUp][j] +
+						wLeft * (float)testgrid[i][j - sLeft] + wRight * (float)testgrid[i][j + sRight]) / wDen);
+				}
+				else {
+					rendergrid[i][j] = testgrid[i][j];
+				}
+
+				intensity = rendergrid[i][j];
+
+				// Draw
+				color.r = colormap[intensity][0];
+				color.g = colormap[intensity][1];
+				color.b = colormap[intensity][2];
+
+				for (int a = i*interpLevel; a <= (i + 1)*interpLevel; a++)
+				{
+					for (int b = j*interpLevel; b <= (j + 1)*interpLevel; b++)
+					{
+						scopeImage.setPixel(a, b, color);
+					}
+				}
+			}
+		}
+	}
+
+	/*
+	// plot points of image
+	for (int n = 0; n < captureCount; n++)
+	{
+	// Determine draw location
+	xLoc = ((float)(mirrData[0][n] - minX)*0.98/ rangeX) * imageWidth;
+	yLoc = ((float)(mirrData[1][n] - minY)*0.98/ rangeY) * imageHeight;
+
+	// Determine pixel intensity
+	intensity = (((float)(peakData[n] - minSig) / rangeSig)) * 255;
+	intensity = min(220, intensity);
+
+	// Apply color map if one is loeaded, otherwise use grayscale
+	if (colormap)
+	{
+	color.r = colormap[intensity][0];
+	color.g = colormap[intensity][1];
+	color.b = colormap[intensity][2];
+	}
+	else {
+	color.r = intensity;
+	color.g = intensity;
+	color.b = intensity;
+	}
+
+	// plot
+	for (int a = 0; a <= 3; a++)
+	{
+	for (int b = 0; b <= 3; b++)
+	{
+	scopeImage.setPixel(xLoc+a, yLoc+b, color);
+	}
+	}
+	}
+	*/
+
+	sf::IntRect r1(0, 0, imageWidth, imageHeight);
+	scopeTexture.loadFromImage(scopeImage, r1);
+
+	// Draw stuff
+	window->clear();
+	background.setTexture(scopeTexture);
+	window->draw(background);
+	window->display();
+
+	resetWindowVars();
+
 	// Check if clossing
 	if (checkWindowCommands())
 	{

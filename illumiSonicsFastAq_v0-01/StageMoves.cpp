@@ -1,6 +1,6 @@
 #include "StageMoves.h"
 
-int motorSpeed = 1000000; // in Hz
+int motorSpeed = 2500; // in Hz
 
 void moveXStage(int steps, uInt8 clockSig[])
 {
@@ -14,7 +14,7 @@ void moveXStage(int steps, uInt8 clockSig[])
 	}
 
 	DAQmxCreateTask("X", &XClockOut);
-	DAQmxCreateDOChan(XClockOut, "Dev1/port0/line0", "X", DAQmx_Val_ChanForAllLines); // Xmotor
+	DAQmxCreateDOChan(XClockOut, "Dev1/port0/line1", "X", DAQmx_Val_ChanForAllLines); // Xmotor
 	DAQmxCfgSampClkTiming(XClockOut, NULL, motorSpeed, DAQmx_Val_Rising, DAQmx_Val_FiniteSamps, bits); // Ext. Trig
 	DAQmxWriteDigitalLines(XClockOut, bits, 0, 1000.0, DAQmx_Val_GroupByChannel, signal, NULL, NULL); // X Motor signal	
 	DAQmxStartTask(XClockOut); // Pulse motor
@@ -38,7 +38,7 @@ void moveYStage(int steps, uInt8 clockSig[])
 	}
 
 	DAQmxCreateTask("Y", &YClockOut);
-	DAQmxCreateDOChan(YClockOut, "Dev1/port0/line1", "Y", DAQmx_Val_ChanForAllLines); // Ymotor
+	DAQmxCreateDOChan(YClockOut, "Dev1/port0/line0", "Y", DAQmx_Val_ChanForAllLines); // Ymotor
 	DAQmxCfgSampClkTiming(YClockOut, NULL, motorSpeed, DAQmx_Val_Rising, DAQmx_Val_FiniteSamps, bits); // Int. Trig
 	DAQmxWriteDigitalLines(YClockOut, bits, 0, 1000.0, DAQmx_Val_GroupByChannel, signal, NULL, NULL); // Y Motor signal 
 	DAQmxStartTask(YClockOut); // Pulse motor
