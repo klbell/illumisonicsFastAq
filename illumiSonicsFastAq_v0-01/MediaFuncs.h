@@ -16,7 +16,7 @@ void minMaxExtract(void*  pWorkBuffer, uInt32 u32TransferSize);
 void fastMixExtract(void* pWorkBuffer, uInt32 u32TransferSize);
 void minMaxExtractMT(void* pWorkBuffer, uInt32 u32TransferSize, uInt32 totalSampleTransfered);
 int updateScopeWindow();
-int updateScopeWindowFastMix(int stepTotalX);
+int updateScopeWindowFastMix(int stepTotalX, int stageLoc);
 int makeImageRealtime(void* pWorkBuffer);
 void resetWindowVars(); // Resets counting variables for next pass
 int checkWindowCommands();

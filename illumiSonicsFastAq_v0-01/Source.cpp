@@ -189,7 +189,7 @@ int runFastMix()
 
 
 		gageStreamRealtimeFastMix();
-		updateScopeWindowFastMix(stepTotalX);
+		updateScopeWindowFastMix(stepTotalX, stageLocation);
 
 
 		// Reverse if at end of stage

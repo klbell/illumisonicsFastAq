@@ -968,6 +968,8 @@ int initializeGageStream(bool bFastMix)
 	uInt32						u32Mode; 	
 	uInt32						u32DataSegmentWithTailInBytes = 0;
 
+	// bFastMix = false;
+
 	if (bFastMix)
 	{
 		szIniFile = _T("ISS_SettingsFastMix.ini");
@@ -1130,6 +1132,7 @@ int gageStreamRealtime()
 
 	printf("\nStarting stream. Press ESC to abort\n\n");
 
+	int testVar = 0;
 
 	// Start data aquisition
 	i32Status = CsDo(hSystem, ACTION_START);
@@ -1174,6 +1177,8 @@ int gageStreamRealtime()
 			{
 				// Do analysis
 				minMaxExtract(pWorkBuffer, CsAcqCfg.i64SegmentSize);
+
+				_ftprintf(stdout, _T("%d\n"),testVar++);
 			}
 		}
 		
@@ -1372,13 +1377,13 @@ int gageStreamRealtimeFastMix()
 
 
 	// Pull last data point from buffer
-	if (StmConfig.bDoAnalysis)
+	/*if (StmConfig.bDoAnalysis)
 	{
 		if (u32SaveCount < CsAcqCfg.u32SegmentCount)
 		{
 			fastMixExtract(pWorkBuffer, CsAcqCfg.i64SegmentSize);
 		}
-	}
+	}*/
 
 	return 0;
 }
