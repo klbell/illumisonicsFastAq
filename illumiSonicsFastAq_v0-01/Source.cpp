@@ -144,7 +144,7 @@ int runFastMix()
 
 	initializeGageStream(bFastMix);
 	OpenRTWindow(); // Launch view window
-	initializeWindowVars(false); // Set ploting variables
+	initializeWindowVarsFastMix(stepTotalX); // Set ploting variables
 
 	
 

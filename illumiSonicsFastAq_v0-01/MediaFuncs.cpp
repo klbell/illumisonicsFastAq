@@ -12,8 +12,9 @@ int16 *peakData;
 int16 **mirrData;
 uInt8 colormap[256][3];
 
-int imageWidth = 300;
-int imageHeight = 300;
+int FastMixScale = 4;
+int imageWidth = 100 * FastMixScale;
+int imageHeight = 50 * FastMixScale;
 
 int interpLevel = 1; // size (in pixels) of output pixels;
 int interpHeight, interpWidth;
@@ -24,6 +25,11 @@ int searchSizeX = 0; // how far does fancy interpolation look?
 int searchSizeY = 0;
 
 int maxX = 0, maxY = 0, maxSig = 0, minX = 0, minY = 0, minSig = 0;
+
+int xLoc, yLoc;
+float halfX, halfY, rangeX, rangeY, rangeSig;
+int intensity;
+
 
 
 
@@ -75,6 +81,39 @@ void initializeWindowVars(bool MT)
 			testgrid[i][j] = 0;
 			rendergrid[i][j] = 0;
 			testgridCount[i][j] = 0;
+		}
+	}
+}
+
+void initializeWindowVarsFastMix(int stepTotalX)
+{
+	// Get segment count
+	uInt32 segmentCount = getSegmentCount();
+
+	// Setup plotting vairables
+	peakData = new int16[segmentCount];
+	mirrData = new int16*[1];
+	for (int n = 0; n < 2; n++)
+	{
+		mirrData[n] = new int16[segmentCount];
+	}
+
+	// Load colormap
+	loadColorMap();
+
+	imageWidth = stepTotalX*FastMixScale;
+	imageHeight = 50 * FastMixScale;
+	
+
+	rendergrid = new int*[imageHeight];
+	
+	for (int i = 0; i < imageHeight; i++)
+	{
+		rendergrid[i] = new int[imageWidth];
+
+		for (int j = 0; j < imageWidth; j++)
+		{
+			rendergrid[i][j] = 0;
 		}
 	}
 }
@@ -439,18 +478,8 @@ int updateScopeWindowFastMix(int stepTotalX, int stageLoc)
 	sf::Texture scopeTexture;
 	sf::Sprite background;
 	sf::Color color;
-
-	int xLoc, yLoc;
-	float halfX, halfY, rangeX, rangeY, rangeSig;
-	int intensity;
-
-	int fastMixWinWidth = stepTotalX;
-	int fastMixWinHeight = 50;
-
-	interpHeight = fastMixWinHeight / interpLevel;
-	interpWidth = fastMixWinWidth / interpLevel;
-
-	scopeImage.create(fastMixWinWidth, fastMixWinHeight, sf::Color::Black);
+			
+	scopeImage.create(imageWidth*FastMixScale, imageHeight * FastMixScale, sf::Color::Black);
 
 	// Find min max values
 	findMinMax();
@@ -462,34 +491,7 @@ int updateScopeWindowFastMix(int stepTotalX, int stageLoc)
 	halfX = rangeX / 2;
 	halfY = rangeY / 2;
 
-	// plot points on test grid
-	for (int n = 0; n < captureCount; n++)
-	{
-		// Determine draw location
-		xLoc = (int)(((float)(mirrData[0][n] - minX)*0.98 / rangeX) * fastMixWinHeight);
-		yLoc = stageLoc + halfY + 1;
-
-		// Determine pixel intensity
-		intensity = (((float)(peakData[n] - minSig)*1.5 / rangeSig)) * 255;
-		intensity = min(240, intensity);
-
-
-		testgrid[yLoc][xLoc] += intensity;
-		testgridCount[yLoc][xLoc]++;
-	}
-
-	// Average grid pixels which have multiple occurrances
-	for (int i = 0; i < interpHeight; i++)
-	{
-		for (int j = 0; j < interpWidth; j++)
-		{
-			if (testgridCount[i][j] > 1)
-			{
-				testgrid[i][j] = testgrid[i][j] / testgridCount[i][j];
-			}
-		}
-	}
-
+	
 	bool oldAverage = false;
 	int sUp, sDown, sRight, sLeft; // for fancy averaging
 	float wUp, wDown, wLeft, wRight, wDen;
@@ -502,32 +504,58 @@ int updateScopeWindowFastMix(int stepTotalX, int stageLoc)
 	for (int n = 0; n < captureCount; n++)
 	{
 		// Determine draw location
-		xLoc = ((float)(mirrData[0][n] - minX)*0.98/ rangeX) * imageWidth;
-		yLoc = ((float)(mirrData[1][n] - minY)*0.98/ rangeY) * imageHeight;
+		yLoc = ((float)(mirrData[0][n] - minX)*0.98 / rangeX) * imageHeight / FastMixScale;
+		xLoc = stageLoc + halfY + 1;
+
+		if (xLoc >= imageWidth){ xLoc = imageWidth - 1; }
+		if (yLoc >= imageHeight){ yLoc = imageHeight - 1; }
+
+		_ftprintf(stdout, _T("%d, %d\n"),xLoc, yLoc);
 
 		// Determine pixel intensity
 		intensity = (((float)(peakData[n] - minSig) / rangeSig)) * 255;
 		intensity = min(220, intensity);
 
-		// Apply color map if one is loeaded, otherwise use grayscale
-		if (colormap)
-		{
-			color.r = colormap[intensity][0];
-			color.g = colormap[intensity][1];
-			color.b = colormap[intensity][2];
-		}
-		else {
-			color.r = intensity;
-			color.g = intensity;
-			color.b = intensity;
-		}
+		rendergrid[yLoc][xLoc] = intensity;		
+	}
 
-		// plot
-		for (int a = 0; a <= 3; a++)
+	for (int x = 0; x < imageWidth; x++)
+	{
+		for (int y = 0; y < imageHeight; y++)
 		{
-			for (int b = 0; b <= 3; b++)
+
+			intensity = rendergrid[y][x];
+
+			// Apply color map if one is loeaded, otherwise use grayscale
+			if (colormap)
 			{
-				scopeImage.setPixel(xLoc+a, yLoc+b, color);
+				color.r = colormap[intensity][0];
+				color.g = colormap[intensity][1];
+				color.b = colormap[intensity][2];
+			}
+			else {
+				color.r = intensity;
+				color.g = intensity;
+				color.b = intensity;
+			}
+
+
+			/*// plot
+			for (int a = 0; a <= 1; a++)
+			{
+				for (int b = 0; b <= 1; b++)
+				{
+					scopeImage.setPixel(x*1 + a, y * 1 + b, color);
+				}
+			}*/
+
+			// plot
+			for (int a = 0; a <= FastMixScale-1; a++)
+			{
+				for (int b = 0; b <= FastMixScale-1; b++)
+				{
+					scopeImage.setPixel(x*(FastMixScale-1) + a, y * (FastMixScale-1) + b, color);
+				}
 			}
 		}
 	}
