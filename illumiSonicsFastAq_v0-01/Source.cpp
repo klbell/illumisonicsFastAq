@@ -8,7 +8,7 @@ bool useMTTrans = false;
 
 // For fast mixed imaging
 float XStepSize = 5 / 4; // um
-float XTotSize = 100; // um
+float XTotSize = 200; // um
 
 int main()
 {
@@ -143,7 +143,7 @@ int runFastMix()
 	bool bFastMix = 1;
 
 	initializeGageStream(bFastMix);
-	OpenRTWindow(); // Launch view window
+	OpenRTWindowFastMix(stepTotalX); // Launch view window
 	initializeWindowVarsFastMix(stepTotalX); // Set ploting variables
 
 	

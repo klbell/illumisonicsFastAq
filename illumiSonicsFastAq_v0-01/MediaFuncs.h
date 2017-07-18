@@ -11,6 +11,7 @@
 
 // Media functions
 void OpenRTWindow();
+void OpenRTWindowFastMix(int stepTotalX);
 void initializeWindowVars(bool MT); // Initializes all relavent plotting and image variables
 void initializeWindowVarsFastMix(int stepTotalX);
 void minMaxExtract(void*  pWorkBuffer, uInt32 u32TransferSize);

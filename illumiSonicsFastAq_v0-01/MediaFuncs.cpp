@@ -12,9 +12,9 @@ int16 *peakData;
 int16 **mirrData;
 uInt8 colormap[256][3];
 
-int FastMixScale = 4;
-int imageWidth = 100 * FastMixScale;
-int imageHeight = 50 * FastMixScale;
+int FastMixScale = 2;
+int imageWidth = 500 * FastMixScale;
+int imageHeight = 200 * FastMixScale;
 
 int interpLevel = 1; // size (in pixels) of output pixels;
 int interpHeight, interpWidth;
@@ -35,6 +35,12 @@ int intensity;
 
 void OpenRTWindow()
 {
+	window = new sf::RenderWindow(sf::VideoMode(imageWidth, imageHeight), "IS Scope RT");
+}
+
+void OpenRTWindowFastMix(int stepTotalX)
+{
+	imageWidth = stepTotalX*FastMixScale;
 	window = new sf::RenderWindow(sf::VideoMode(imageWidth, imageHeight), "IS Scope RT");
 }
 
@@ -101,8 +107,8 @@ void initializeWindowVarsFastMix(int stepTotalX)
 	// Load colormap
 	loadColorMap();
 
-	imageWidth = stepTotalX*FastMixScale;
-	imageHeight = 50 * FastMixScale;
+	//imageWidth = stepTotalX*FastMixScale;
+	//imageHeight = 50 * FastMixScale;
 	
 
 	rendergrid = new int*[imageHeight];
@@ -504,13 +510,13 @@ int updateScopeWindowFastMix(int stepTotalX, int stageLoc)
 	for (int n = 0; n < captureCount; n++)
 	{
 		// Determine draw location
-		yLoc = ((float)(mirrData[0][n] - minX)*0.98 / rangeX) * imageHeight / FastMixScale;
+		yLoc = ((float)(mirrData[0][n] - minX)*0.98 / rangeX) * (imageHeight / (FastMixScale));
 		xLoc = stageLoc + halfY + 1;
 
 		if (xLoc >= imageWidth){ xLoc = imageWidth - 1; }
 		if (yLoc >= imageHeight){ yLoc = imageHeight - 1; }
 
-		_ftprintf(stdout, _T("%d, %d\n"),xLoc, yLoc);
+		//_ftprintf(stdout, _T("%d, %d\n"),xLoc, yLoc);
 
 		// Determine pixel intensity
 		intensity = (((float)(peakData[n] - minSig) / rangeSig)) * 255;
@@ -554,7 +560,7 @@ int updateScopeWindowFastMix(int stepTotalX, int stageLoc)
 			{
 				for (int b = 0; b <= FastMixScale-1; b++)
 				{
-					scopeImage.setPixel(x*(FastMixScale-1) + a, y * (FastMixScale-1) + b, color);
+					scopeImage.setPixel(x*(FastMixScale) + a, y * (FastMixScale) + b, color);
 				}
 			}
 		}
